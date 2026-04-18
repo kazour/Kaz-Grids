@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+
+# Release zip (published as a GitHub release asset, not in repo)
+Kaz Grids.zip
+
+# User-specific runtime data
+settings/*.json
+profiles/*.json
+!profiles/Default.json
+
+# IDE / dev tooling
+.vscode/
+.claude/

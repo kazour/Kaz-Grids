@@ -1,0 +1,25 @@
+name: Bug report
+description: Something in Kaz Grids isn't working
+labels: [bug]
+body:
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, what you got instead.
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Kaz Grids version
+      placeholder: e.g. 1.0.0
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Windows version
+      placeholder: e.g. Windows 11 23H2
+  - type: textarea
+    attributes:
+      label: Relevant log output or grid config
+      description: Paste any errors, or attach the grid JSON if the issue is about a specific grid.
+      render: shell
