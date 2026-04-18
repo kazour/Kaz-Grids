@@ -18,3 +18,5 @@ profiles/*.json
 # IDE / dev tooling
 .vscode/
 .claude/
+CLAUDE.md
+help_tab_text.txt
