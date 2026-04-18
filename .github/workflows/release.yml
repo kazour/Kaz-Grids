@@ -1,0 +1,28 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python build.py
+      - name: Compute SHA256
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash "Kaz Grids.zip" -Algorithm SHA256).Hash.ToLower()
+          "$hash  Kaz Grids.zip" | Out-File -Encoding ascii -NoNewline "Kaz Grids.zip.sha256"
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Kaz Grids ${{ github.ref_name }}
+          body_path: .github/release-notes.md
+          files: |
+            Kaz Grids.zip
+            Kaz Grids.zip.sha256
