@@ -15,7 +15,7 @@ from datetime import datetime
 # Configuration
 APP_NAME = "Kaz Grids"
 MAIN_SCRIPT = "kzgrids.py"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 # Directories
 ROOT_DIR = Path(__file__).parent

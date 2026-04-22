@@ -35,7 +35,7 @@ from Modules.grids_panel import GridsPanel
 from Modules.instructions_panel import InstructionsPanel
 
 APP_NAME = "Kaz Grids"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 SETTINGS_FILE = "kzgrids_settings.json"
 
 logger = logging.getLogger(__name__)
