@@ -13,7 +13,7 @@ Before this routine can work, these must be true. Check them on first run; if an
    - `fetch-depth: 0` on checkout (for full history)
    - `cache: 'pip'` on setup-python
    - `if: startsWith(github.ref, 'refs/tags/')` guard on the gh-release step so manual dispatches don't create releases
-2. **`.github/release-notes.md` exists.** The workflow reads release notes from this file. The routine below overwrites it each release. If it doesn't exist, create an empty one and commit it.
+2. **`.github/release-notes.md` exists** and holds evergreen install/highlights content. The workflow reads release notes from this file. The routine below **prepends** a "What's New" section each release — the evergreen body stays intact. If the file doesn't exist, bootstrap it with Highlights / Install / Requirements content before running the routine.
 3. **`CHANGELOG.md` exists at repo root.** The routine prepends to it. If missing, create with a single header line.
 
 ---
@@ -152,7 +152,7 @@ Write `/mnt/user-data/outputs/CHANGELOG_DRAFT.md` grouping the commits:
 
 **APPROVAL GATE #2.** Present the draft to Kaz. Wait for edits or approval. Do not proceed.
 
-Once approved, the routine must also write the **same content** (everything from the `## v1.1.0` line down, excluding the closing `---`) to `.github/release-notes.md`, overwriting it. The workflow uses that file as the release body. The `---` separator stays in CHANGELOG.md only — it separates versions.
+Once approved, the routine must also **prepend** the approved notes to `.github/release-notes.md` as a `## What's New in vX.Y.Z` section, followed by a `---` separator, then the existing Highlights / Install / Requirements body. Do not overwrite — the evergreen install content carries forward every release. The workflow uses this file as the release body. The `---` separator in CHANGELOG.md separates versions there; in release-notes.md it separates "What's New" from the evergreen body.
 
 ---
 
@@ -180,7 +180,7 @@ mv CHANGELOG.new CHANGELOG.md
 
 If `CHANGELOG.md` has a `# Changelog` header that should stay at the top, adjust — handle this case by reading the file first and inserting the draft after line 1.
 
-Overwrite `.github/release-notes.md` with the approved notes (see Step 2 above).
+Prepend the approved notes to `.github/release-notes.md` as a `## What's New in vX.Y.Z` section followed by a `---` separator — do not touch the evergreen Highlights / Install / Requirements body below (see Step 2 above).
 
 Stage and commit:
 
