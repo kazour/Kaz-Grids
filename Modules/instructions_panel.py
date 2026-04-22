@@ -58,10 +58,16 @@ class InstructionsPanel(ttk.Frame):
 
         # --- Creating Grids ---
 
-        self._add_section(inner, "Creating Grids", [
+        creating = self._add_section(inner, "Creating Grids", [
             "Click + Add Grid, pick a shape preset (or set custom rows and columns). "
             "You can have up to 64 total slots spread across all your grids.",
         ], initially_open=True)
+        self._add_paragraph(creating.content,
+            "The 64-slot cap comes from an ActionScript limit on how many icon "
+            "objects the overlay can manage reliably. If you hit it, reduce "
+            "grid size or remove a grid rather than disabling \u2014 disabled grids "
+            "still count toward the cap."
+        )
 
         # --- Player vs Target ---
 
@@ -232,6 +238,13 @@ class InstructionsPanel(ttk.Frame):
             "preview mode in-game (Shift+Ctrl+Alt), note each grid's X/Y "
             "coordinates, enter them in the app, and rebuild.",
             "To apply changes in-game, type /reloadui then /reloadgrids in chat.",
+        ])
+
+        self._add_section(inner, "Removing Kaz Grids from a game client", [
+            "Use File \u2192 Uninstall from game client\u2026 to remove KazGrids.swf "
+            "and related files from the selected client. The client stays in your "
+            "Clients list afterwards; remove it separately if you also want to stop "
+            "managing it from the app.",
         ])
 
         # Bottom spacer

@@ -180,21 +180,19 @@ class CodeGenerator:
     }
 '''
 
-    def _resolve_names_to_ids(self, names):
-        """Resolve a list of entry names to a deduplicated sorted list of buff IDs."""
+    def _expand_primary_ids(self, primary_ids):
+        """Expand primary spell IDs to full ID lists (respecting stacking)."""
         ids = []
-        for name in names:
-            entry = self.database.get_entry_by_name(name)
+        for pid in primary_ids:
+            entry = self.database.by_id.get(pid)
             if entry:
                 entry_ids = entry.get('ids', [])
                 if entry.get('stacking', False):
                     start = entry.get('stackStart', 1)
                     if entry.get('partialList', False):
-                        # Partial list: keep all IDs, label starts at stackStart
                         for i, bid in enumerate(entry_ids):
                             self._stack_labels[bid] = start + i
                     else:
-                        # Complete list: filter by position range
                         end = entry.get('stackEnd', 0) or len(entry_ids)
                         filtered = entry_ids[start - 1:end]
                         for i, bid in enumerate(filtered):
@@ -202,7 +200,8 @@ class CodeGenerator:
                         entry_ids = filtered
                 ids.extend(entry_ids)
             else:
-                logger.warning("Buff name not found in database: %r — skipped", name)
+                logger.warning("Primary ID %d not in database — skipped", pid)
+
         seen = set()
         result = []
         for bid in ids:
@@ -212,17 +211,16 @@ class CodeGenerator:
         return sorted(result)
 
     def _resolve_grid(self, grid):
-        """Return a resolved copy of the grid with names converted to IDs (per-build only)."""
         resolved = dict(grid)
         whitelist = grid.get('whitelist', [])
-        if whitelist and isinstance(whitelist[0], str):
-            resolved['whitelist'] = self._resolve_names_to_ids(whitelist)
+        if whitelist:
+            resolved['whitelist'] = self._expand_primary_ids(whitelist)
         slot_assignments = grid.get('slotAssignments', {})
         if slot_assignments:
             resolved_sa = {}
             for k, v in slot_assignments.items():
-                if v and isinstance(v[0], str):
-                    resolved_sa[k] = self._resolve_names_to_ids(v)
+                if v:
+                    resolved_sa[k] = self._expand_primary_ids(v)
                 else:
                     resolved_sa[k] = v
             resolved['slotAssignments'] = resolved_sa

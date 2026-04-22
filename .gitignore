@@ -9,11 +9,14 @@ dist/
 
 # Release zip (published as a GitHub release asset, not in repo)
 Kaz Grids.zip
+*.sha256
+
+# Internal planning docs
+PATCH_PLAN.md
 
 # User-specific runtime data
 settings/*.json
 profiles/*.json
-!profiles/Default.json
 
 # IDE / dev tooling
 .vscode/

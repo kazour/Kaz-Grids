@@ -313,15 +313,16 @@ class BuffEditDialog(tk.Toplevel):
     def parse_ids(self):
         text = self.ids_text.get('1.0', 'end').strip()
         parts = re.split(r'[\n,]+', text)
-        ids = []
+        ids, rejected = [], []
         for part in parts:
             part = part.strip()
-            if part:
-                try:
-                    ids.append(int(part))
-                except ValueError:
-                    pass
-        return ids
+            if not part:
+                continue
+            try:
+                ids.append(int(part))
+            except ValueError:
+                rejected.append(part)
+        return ids, rejected
 
     def _on_stacking_changed(self):
         if self.stacking_var.get():
@@ -353,7 +354,15 @@ class BuffEditDialog(tk.Toplevel):
             self.stack_end_frame.grid()
 
     def on_ok(self):
-        ids = self.parse_ids()
+        ids, rejected = self.parse_ids()
+        if rejected:
+            preview = ', '.join(rejected[:5]) + ('...' if len(rejected) > 5 else '')
+            if Messagebox.yesno(
+                f"These entries weren't valid numbers and will be skipped:\n\n"
+                f"{preview}\n\nSave anyway?",
+                title="Invalid IDs"
+            ) != "Yes":
+                return
         if not ids:
             Messagebox.show_error("Enter at least one buff ID — find IDs on AoC database sites.",
                                   title="Missing Buff ID")
@@ -545,20 +554,23 @@ class DatabaseEditorTab(ttk.Frame):
         self.category_combo['values'] = ["All"] + self.database.categories
 
     def _get_grid_usage(self):
-        """Build a dict of buff_name → count of grids referencing it."""
+        """Build a dict of entry_name → count of grids referencing it."""
         if not self._get_grids:
             return {}
         usage = {}
         for grid in self._get_grids():
-            seen = set()
-            for name in grid.get('whitelist', []):
-                seen.add(name)
+            primary_ids = list(grid.get('whitelist', []))
             for val in grid.get('slotAssignments', {}).values():
                 if isinstance(val, list):
-                    seen.update(v for v in val if isinstance(v, str))
-                elif val:
-                    seen.add(val)
-            for name in seen:
+                    primary_ids.extend(v for v in val if isinstance(v, int))
+                elif isinstance(val, int):
+                    primary_ids.append(val)
+            seen_entries = set()
+            for pid in primary_ids:
+                entry = self.database.by_id.get(pid)
+                if entry:
+                    seen_entries.add(entry['name'])
+            for name in seen_entries:
                 usage[name] = usage.get(name, 0) + 1
         return usage
 

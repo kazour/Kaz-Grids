@@ -156,12 +156,6 @@ def create_bundle():
         folder_path.mkdir(exist_ok=True)
         print(f"  Created folder: {folder}")
 
-    # Copy default profile if it exists
-    default_profile = ROOT_DIR / "profiles" / "Default.json"
-    if default_profile.exists():
-        shutil.copy2(default_profile, BUNDLE_DIR / "profiles" / "Default.json")
-        print("  Copied: profiles/Default.json")
-
     print("  Done.")
     return True
 

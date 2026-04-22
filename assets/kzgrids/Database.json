@@ -156,7 +156,7 @@
       "type": "debuff"
     },
     {
-      "name": "Acid Decay",
+      "name": "Acid Decay (Basilisk)",
       "ids": [
         4383191
       ],
@@ -164,7 +164,7 @@
       "type": "debuff"
     },
     {
-      "name": "Aflame",
+      "name": "Aflame (Sheng)",
       "ids": [
         4357732
       ],
@@ -172,7 +172,7 @@
       "type": "debuff"
     },
     {
-      "name": "Broken Armor Ruin",
+      "name": "Broken Armor Ruin (T4 adds)",
       "ids": [
         4552633
       ],
@@ -180,7 +180,7 @@
       "type": "debuff"
     },
     {
-      "name": "Crushed Armor Wrack",
+      "name": "Crushed Armor Wrack (T4 adds)",
       "ids": [
         4553214
       ],
@@ -196,7 +196,7 @@
       "type": "debuff"
     },
     {
-      "name": "Open Wound Wrack",
+      "name": "Open Wound Wrack (T4 adds)",
       "ids": [
         4552666
       ],
@@ -204,7 +204,7 @@
       "type": "debuff"
     },
     {
-      "name": "Petrify",
+      "name": "Petrify (Basilisk)",
       "ids": [
         5064063
       ],
@@ -212,7 +212,7 @@
       "type": "debuff"
     },
     {
-      "name": "Predatory Torment",
+      "name": "Predatory Torment (T4 adds)",
       "ids": [
         4857503
       ],
@@ -220,7 +220,7 @@
       "type": "debuff"
     },
     {
-      "name": "Shackles",
+      "name": "Shackles (Basilisk)",
       "ids": [
         4857484
       ],
@@ -236,7 +236,7 @@
       "type": "buff"
     },
     {
-      "name": "Tainted Blood",
+      "name": "Tainted Blood (Basilisk)",
       "ids": [
         4383111
       ],
@@ -2846,7 +2846,7 @@
       "type": "buff"
     },
     {
-      "name": "Pollen Cloud",
+      "name": "Pollen Cloud (Imp)",
       "ids": [
         4680545
       ],
@@ -3146,6 +3146,62 @@
       "category": "#T5",
       "type": "debuff",
       "stacking": true
+    },
+    {
+      "name": "Sickness (Zodiac)",
+      "ids": [
+        4704427
+      ],
+      "category": "#T4",
+      "type": "debuff"
+    },
+    {
+      "name": "Withering (Zodiac)",
+      "ids": [
+        4704872
+      ],
+      "category": "#T4",
+      "type": "debuff"
+    },
+    {
+      "name": "Mortal Affliction (Emperor)",
+      "ids": [
+        4701862
+      ],
+      "category": "#T4",
+      "type": "debuff"
+    },
+    {
+      "name": "Aflame Cleanse (Sheng)",
+      "ids": [
+        4414104
+      ],
+      "category": "#T4",
+      "type": "misc"
+    },
+    {
+      "name": "Targetted Strikes (Sheng)",
+      "ids": [
+        4357818
+      ],
+      "category": "#T4",
+      "type": "debuff"
+    },
+    {
+      "name": "Acid Bite (Basilisk)",
+      "ids": [
+        4383121
+      ],
+      "category": "#T4",
+      "type": "debuff"
+    },
+    {
+      "name": "Wail of Chaos (Cetriss)",
+      "ids": [
+        5052580
+      ],
+      "category": "#T6",
+      "type": "misc"
     }
   ]
 }

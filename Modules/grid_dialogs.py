@@ -277,7 +277,7 @@ class AddGridWizard(tk.Toplevel):
 class BuffSelectorDialog(tk.Toplevel):
     """Dual-list dialog for selecting buff names from the database."""
 
-    def __init__(self, parent, database, title="Select Buffs", initial_names=None, layout='mixed'):
+    def __init__(self, parent, database, title="Select Buffs", initial_ids=None, layout='mixed'):
         super().__init__(parent)
         self.withdraw()
         self.title(title)
@@ -286,8 +286,11 @@ class BuffSelectorDialog(tk.Toplevel):
 
         self.database = database
         self.layout = layout
-        valid_names = {b['name'] for b in database.grouped_buffs}
-        self.selected_names = {n for n in (initial_names or []) if n in valid_names}
+        self.selected_names = set()
+        for bid in (initial_ids or []):
+            entry = database.by_id.get(bid)
+            if entry:
+                self.selected_names.add(entry['name'])
         self.result = None
 
         self._debounced_refresh = debounced_callback(self, 200, self.refresh_lists)
@@ -440,7 +443,11 @@ class BuffSelectorDialog(tk.Toplevel):
 
     def on_ok(self):
         self.save_filter_state()
-        self.result = list(self.selected_names)
+        self.result = []
+        for name in self.selected_names:
+            entry = self.database.get_entry_by_name(name)
+            if entry and entry.get('ids'):
+                self.result.append(entry['ids'][0])
         self.destroy()
 
     def on_cancel(self):
@@ -693,7 +700,9 @@ class SlotAssignmentDialog(tk.Toplevel):
             buffs = self.assignments.get(i, [])
             if buffs:
                 counts = Counter()
-                for name in buffs:
+                for bid in buffs:
+                    entry = self.database.by_id.get(bid)
+                    name = entry['name'] if entry else f"(missing #{bid})"
                     counts[name] += 1
                 parts = [f"{n} x{c}" if c > 1 else n for n, c in counts.items()]
                 lines.append(f"Slot {i}: {', '.join(parts)}")
@@ -712,7 +721,7 @@ class SlotAssignmentDialog(tk.Toplevel):
     def edit_slot(self, slot_index):
         dialog = BuffSelectorDialog(
             self, self.database, f"Slot {slot_index} Buffs",
-            initial_names=self.assignments.get(slot_index, []),
+            initial_ids=self.assignments.get(slot_index, []),
             layout=self.grid_config.get('layout', 'mixed'),
         )
         self.wait_window(dialog)

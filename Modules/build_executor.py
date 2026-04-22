@@ -65,6 +65,50 @@ def install_to_client(staging_swf, game_path, use_aoc):
     return True, ""
 
 
+def uninstall_from_client(game_path):
+    """Remove Kaz Grids files from one game client.
+
+    Returns (success, message).
+    """
+    removed = []
+    try:
+        swf = Path(game_path) / "Data" / "Gui" / "Default" / "Flash" / "KazGrids.swf"
+        if swf.exists():
+            swf.unlink()
+            removed.append("KazGrids.swf")
+
+        aoc_dir = Path(game_path) / "Data" / "Gui" / "Aoc" / "KazGrids"
+        if aoc_dir.exists():
+            shutil.rmtree(aoc_dir)
+            removed.append("Aoc module files")
+
+        for script in ("reloadgrids", "unloadgrids"):
+            p = Path(game_path) / "Scripts" / script
+            if p.exists():
+                p.unlink()
+                removed.append(script)
+
+        auto_login = Path(game_path) / "Scripts" / "auto_login"
+        if auto_login.exists():
+            try:
+                content = auto_login.read_text(encoding='utf-8')
+                new_content = strip_marker_block(content, "# KzGrids auto-load")
+                if new_content != content:
+                    if new_content.strip():
+                        auto_login.write_text(new_content, encoding='utf-8')
+                    else:
+                        auto_login.unlink()
+                    removed.append("auto_login entry")
+            except (UnicodeDecodeError, OSError):
+                pass
+    except OSError as e:
+        return False, f"Could not remove files:\n\n{e}"
+
+    if not removed:
+        return True, "Nothing to remove \u2014 Kaz Grids isn't installed in this client."
+    return True, "Removed: " + ", ".join(removed)
+
+
 def detect_aoc_any(game_paths):
     """Check all game paths for launcher bypass (aoc.exe or Aoc.log).
 

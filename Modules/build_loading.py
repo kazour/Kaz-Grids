@@ -235,7 +235,7 @@ def show_welcome_popup(parent, grid_count, enabled_count,
                            font=FONT_SMALL, fill=THEME_COLORS['muted'])
         y += line_spacing
     canvas.create_text(WIDTH // 2, y,
-                       text="Edit \u2192 Clear All Grids to start from scratch",
+                       text="Switch to the Grids tab to customize",
                        font=FONT_SMALL, fill=THEME_COLORS['muted'])
 
     # Close button — use hit-test on canvas click for reliable detection
@@ -281,7 +281,7 @@ def show_welcome_popup(parent, grid_count, enabled_count,
 
 
 DISCORD_URL = "https://discord.gg/JKcmUKpP"
-GITHUB_URL = None  # set when public repo is live
+GITHUB_URL = "https://github.com/kazour/Kaz-Grids"
 
 
 def show_about_popup(parent, app_name, app_version):

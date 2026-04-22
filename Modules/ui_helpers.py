@@ -928,7 +928,7 @@ class ToastManager:
         self._parent = parent
         self._toasts = []
 
-    def show(self, message, style='info', duration=4):
+    def show(self, message, style='info', duration=4, on_click=None):
         color = THEME_COLORS.get(self.STYLES.get(style, 'accent'), THEME_COLORS['accent'])
 
         toast = tk.Frame(self._parent, bg=TK_COLORS['status_bg'],
@@ -940,6 +940,11 @@ class ToastManager:
                           foreground=THEME_COLORS['body'],
                           background=TK_COLORS['status_bg'])
         label.pack(side='left', padx=(PAD_LF, PAD_TAB), pady=PAD_XS)
+
+        if on_click:
+            for w in (toast, accent_bar, label):
+                w.configure(cursor='hand2')
+                w.bind('<Button-1>', lambda _e: on_click())
 
         self._toasts.append(toast)
         self._reposition()

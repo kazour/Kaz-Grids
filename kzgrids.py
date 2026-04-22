@@ -8,6 +8,7 @@ import logging
 import shutil
 import sys
 import tkinter as tk
+import webbrowser
 from tkinter import filedialog, ttk
 from pathlib import Path
 
@@ -169,7 +170,6 @@ class KzGridsApp(ttkb.Window):
 
         # Window position
         self.minsize(900, 500)
-        self.maxsize(900, self.winfo_screenheight())
         restore_window_position(self, 'main_window', 900, 650)
         bind_window_position_save(self, 'main_window', save_size=True)
 
@@ -188,6 +188,8 @@ class KzGridsApp(ttkb.Window):
         # First launch check
         if not self.game_clients:
             self.after(100, self._show_first_launch_dialog)
+
+        self._check_for_updates()
 
     # ========================================================================
     # WIDGET CREATION
@@ -374,6 +376,9 @@ class KzGridsApp(ttkb.Window):
              'command': self._save_profile},
             {'type': 'command', 'label': 'Save Profile As...',
              'command': self._save_profile_as},
+            {'type': 'separator'},
+            {'type': 'command', 'label': 'Uninstall from game client...',
+             'command': self._uninstall_current_client},
             {'type': 'separator'},
             {'type': 'command', 'label': 'About Kaz Grids',
              'command': self._show_about},
@@ -634,6 +639,31 @@ class KzGridsApp(ttkb.Window):
             return self.game_clients[self.active_game_idx]['path']
         return None
 
+    def _uninstall_current_client(self):
+        """Remove Kaz Grids files from the currently selected game client."""
+        game_path = self._get_active_game_path()
+        if not game_path:
+            Messagebox.show_warning(
+                "No game client selected. Add one from the bottom bar first.",
+                title="No Client"
+            )
+            return
+        client_name = self.game_clients[self.active_game_idx]['name']
+        if Messagebox.yesno(
+            f"Remove Kaz Grids files from '{client_name}'?\n\n"
+            "This deletes KazGrids.swf, auto-load entries, and reload scripts "
+            "from that game folder. The client stays in your Clients list \u2014 "
+            "remove it separately if you want.",
+            title="Uninstall from Game Client"
+        ) != "Yes":
+            return
+        from Modules.build_executor import uninstall_from_client
+        ok, msg = uninstall_from_client(game_path)
+        if ok:
+            self.toast.show(msg, 'success', 8)
+        else:
+            Messagebox.show_error(msg, title="Uninstall Failed")
+
     def _update_build_state(self):
         """Enable/disable build button and update game hint."""
         valid_count = sum(1 for c in self.game_clients if Path(c['path']).is_dir())
@@ -667,15 +697,28 @@ class KzGridsApp(ttkb.Window):
     # ========================================================================
     def _check_unsaved_changes(self):
         """Returns True if safe to proceed (saved or discarded). False = user cancelled."""
-        if not self.modified:
+        profile_dirty = self.modified
+        db_dirty = self.db_panel.modified
+        if not profile_dirty and not db_dirty:
             return True
-        result = Messagebox.yesnocancel(
-            f"Save changes to \"{self._get_profile_name()}\"?\n\n"
-            "Your grid layout has changed since the last save.",
-            title="Unsaved Changes"
-        )
+        if profile_dirty and db_dirty:
+            message = "Save unsaved changes to the profile and database?"
+        elif profile_dirty:
+            message = (
+                f"Save changes to \"{self._get_profile_name()}\"?\n\n"
+                "Your grid layout has changed since the last save."
+            )
+        else:
+            message = "Save unsaved changes to the buff database?"
+        result = Messagebox.yesnocancel(message, title="Unsaved Changes")
         if result == "Yes":
-            return self._save_profile()
+            ok = True
+            if profile_dirty:
+                ok = self._save_profile() and ok
+            if db_dirty:
+                self.db_panel.save()
+                ok = (not self.db_panel.modified) and ok
+            return ok
         return result == "No"
 
     def _mark_modified(self):
@@ -796,6 +839,41 @@ class KzGridsApp(ttkb.Window):
             return Path(self.current_profile).stem
         return "Untitled"
 
+    def _check_for_updates(self):
+        """Fire-and-forget background check for a newer GitHub release."""
+        import threading
+        import urllib.request
+        import urllib.error
+
+        def _worker():
+            try:
+                req = urllib.request.Request(
+                    "https://api.github.com/repos/kazour/Kaz-Grids/releases/latest",
+                    headers={'Accept': 'application/vnd.github+json'}
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read().decode('utf-8'))
+                tag = (data.get('tag_name') or '').lstrip('v')
+                if not tag or tag == APP_VERSION:
+                    return
+
+                def _parts(v):
+                    try:
+                        return tuple(int(p) for p in v.split('.'))
+                    except ValueError:
+                        return ()
+                if _parts(tag) <= _parts(APP_VERSION):
+                    return
+                url = data.get('html_url', 'https://github.com/kazour/Kaz-Grids/releases/latest')
+                self.after(0, lambda: self.toast.show(
+                    f"Update available: v{tag} \u2014 click for release notes", 'info', 12,
+                    on_click=lambda: webbrowser.open(url)
+                ))
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
+                pass
+
+        threading.Thread(target=_worker, daemon=True).start()
+
     # ========================================================================
     # BUILD PIPELINE
     # ========================================================================
@@ -834,6 +912,27 @@ class KzGridsApp(ttkb.Window):
                     self._pulse_game_hint()
                 Messagebox.show_error(msg, title="Build Error")
                 return
+
+        empty = []
+        for g in grids:
+            if not g.get('enabled', True):
+                continue
+            if g.get('slotMode') == 'static':
+                sa = g.get('slotAssignments', {})
+                if not any(v for v in sa.values()):
+                    empty.append(g['id'])
+            else:
+                if not g.get('whitelist'):
+                    empty.append(g['id'])
+
+        if empty:
+            names = ', '.join(f"'{n}'" for n in empty)
+            Messagebox.show_error(
+                f"These grids have no tracked buffs and would appear empty in-game:\n\n{names}\n\n"
+                "Add tracked buffs (or slot assignments for static grids), or disable the grid.",
+                title="Empty Grids"
+            )
+            return
 
         # First build with Aoc.exe: warn user to close the game
         if not self.settings.get('has_built_before'):
@@ -981,10 +1080,10 @@ class KzGridsApp(ttkb.Window):
         welcome_data = {}
 
         def on_load_default(resolution_str):
-            default_profile = self.profiles_path / "Default.json"
+            default_profile = self.assets_path / "kzgrids" / "Default.json"
             if not default_profile.exists():
                 Messagebox.show_warning(
-                    "Default.json not found in profiles folder.",
+                    "Default.json not found in assets/kzgrids folder.",
                     title="Default Profile Missing"
                 )
                 return
@@ -1017,7 +1116,7 @@ class KzGridsApp(ttkb.Window):
                     resolution_str=welcome_data['resolution'],
                     profile_name=welcome_data['profile_name']))
 
-        default_exists = (self.profiles_path / "Default.json").exists()
+        default_exists = (self.assets_path / "kzgrids" / "Default.json").exists()
         show_first_launch_dialog(self, APP_NAME, on_game_added, on_load_default,
                                  on_resolution_set, default_exists, on_dialog_closed)
 

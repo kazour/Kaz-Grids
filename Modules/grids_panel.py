@@ -213,7 +213,7 @@ class GridEditorPanel(ttk.Frame):
         ttk.Separator(icon_row, orient='vertical').pack(
             side='left', fill='y', padx=PAD_XS)
         self.stack_font_var, _ = self._add_spinbox(icon_row,
-            "Stack:", 8, 24, 2, "Font size for stack counter at top-right of icons (8-24)",
+            "Stack Font:", 8, 24, 2, "Font size for stack counter at top-right of icons (8-24)",
             padx=(PAD_BUTTON_GAP, PAD_MID))
 
         # Timer group — outer frame stays packed, inner frame toggles
@@ -378,11 +378,10 @@ class GridEditorPanel(ttk.Frame):
         if cfg.get('slotMode') == 'static':
             self.dynamic_frame.pack_forget()
             self._info_label.configure(textvariable=self.slots_label)
-            self._mode_btn.configure(text="Tracked Buffs...")
         else:
             self.dynamic_frame.pack(fill='x')
             self._info_label.configure(textvariable=self.whitelist_label)
-            self._mode_btn.configure(text="Tracked Buffs...")
+        self._mode_btn.configure(text="Tracked Buffs...")
 
         self.update_labels()
         self._update_preview()
@@ -438,7 +437,11 @@ class GridEditorPanel(ttk.Frame):
             self.whitelist_label.set("No buffs tracked \u2014 grid will show nothing")
 
         if wl:
-            preview = ", ".join(wl[:4])
+            names = []
+            for bid in wl[:4]:
+                entry = self.database.by_id.get(bid)
+                names.append(entry['name'] if entry else f"(missing #{bid})")
+            preview = ", ".join(names)
             if len(wl) > 4:
                 preview += f" + {len(wl) - 4} more"
             self.whitelist_preview_var.set(preview)
@@ -448,19 +451,23 @@ class GridEditorPanel(ttk.Frame):
             self.whitelist_preview_label.pack_forget()
 
         sa = cfg.get('slotAssignments', {})
-        assigned_names = []
+        assigned_ids = []
         for v in sa.values():
             if isinstance(v, list):
-                assigned_names.extend(n for n in v if n)
+                assigned_ids.extend(b for b in v if b)
             elif v:
-                assigned_names.append(v)
+                assigned_ids.append(v)
         configured = sum(1 for v in sa.values() if v)
         self.slots_label.set(f"{configured} of {total_slots} slots assigned")
 
-        if cfg.get('slotMode') == 'static' and assigned_names:
-            preview = ", ".join(assigned_names[:4])
-            if len(assigned_names) > 4:
-                preview += f" + {len(assigned_names) - 4} more"
+        if cfg.get('slotMode') == 'static' and assigned_ids:
+            names = []
+            for bid in assigned_ids[:4]:
+                entry = self.database.by_id.get(bid)
+                names.append(entry['name'] if entry else f"(missing #{bid})")
+            preview = ", ".join(names)
+            if len(assigned_ids) > 4:
+                preview += f" + {len(assigned_ids) - 4} more"
             self.whitelist_preview_var.set(preview)
             self.whitelist_preview_label.pack(fill='x', pady=(0, PAD_BUTTON_GAP))
         elif cfg.get('slotMode') == 'static':
@@ -483,7 +490,7 @@ class GridEditorPanel(ttk.Frame):
         self.save_to_config()
         dialog = BuffSelectorDialog(
             self.winfo_toplevel(), self.database, "Edit Tracked Buffs",
-            initial_names=self.grid_config.get('whitelist', []),
+            initial_ids=self.grid_config.get('whitelist', []),
             layout=self.grid_config.get('layout', 'mixed'),
         )
         self.wait_window(dialog)
@@ -956,32 +963,40 @@ class GridsPanel(ttk.Frame):
         self.save_settings()
         return self.grids
 
-    def _migrate_whitelist(self, whitelist):
-        """Convert old int-ID whitelist to name-based format."""
+    def _migrate_whitelist(self, whitelist, missing):
+        """Normalize whitelist entries to primary spell IDs.
+
+        Accepts legacy int IDs and legacy name strings. Orphans are appended
+        to `missing` (list of strings) and dropped from the result.
+        """
         result = []
         for item in whitelist:
             if isinstance(item, int):
-                entry = self.database.find_entry_by_id(item)
-                if entry:
-                    result.append(entry['name'])
+                entry = self.database.by_id.get(item)
+                if entry and entry.get('ids'):
+                    result.append(entry['ids'][0])
                 else:
-                    logger.warning("Migration: buff ID %d not found in database — dropped", item)
-            else:
-                result.append(item)
+                    missing.append(f"id:{item}")
+            elif isinstance(item, str):
+                entry = self.database.get_entry_by_name(item)
+                if entry and entry.get('ids'):
+                    result.append(entry['ids'][0])
+                else:
+                    missing.append(item)
         return result
 
-    def _migrate_grid(self, grid):
-        """Migrate a grid config from old int-based storage to name-based."""
+    def _migrate_grid(self, grid, missing):
         if 'whitelist' in grid:
-            grid['whitelist'] = self._migrate_whitelist(grid['whitelist'])
+            grid['whitelist'] = self._migrate_whitelist(grid['whitelist'], missing)
         if 'slotAssignments' in grid:
             migrated = {}
             for k, v in grid['slotAssignments'].items():
                 if isinstance(v, list):
-                    names = self._migrate_whitelist(v)
-                    migrated[k] = names
+                    migrated[k] = self._migrate_whitelist(v, missing)
                 elif isinstance(v, str):
-                    migrated[k] = [v] if v else []
+                    sub_missing = []
+                    migrated[k] = self._migrate_whitelist([v], sub_missing)
+                    missing.extend(sub_missing)
                 else:
                     migrated[k] = v
             grid['slotAssignments'] = migrated
@@ -991,14 +1006,28 @@ class GridsPanel(ttk.Frame):
         """Load grid configs, validate/clamp values, and rebuild panels."""
         self._tip_active = False
         self._from_empty_state = False
+        missing_by_grid = {}
         validated = []
         for g in grids:
             if not isinstance(g, dict):
                 logger.warning("Skipping non-dict grid entry in profile")
                 continue
-            validated.append(validate_grid(self._migrate_grid(g)))
+            grid_name = g.get('id', 'Unnamed')
+            missing = []
+            g = self._migrate_grid(g, missing)
+            if missing:
+                missing_by_grid[grid_name] = missing
+            validated.append(validate_grid(g))
         self.grids = validated
         self.refresh_panels()
+        if missing_by_grid:
+            lines = [f"\u2022 {name}: {', '.join(refs)}" for name, refs in missing_by_grid.items()]
+            message = (
+                "Some tracked buffs weren't found in the database and were removed:\n\n"
+                + "\n".join(lines) +
+                "\n\nRe-add them via Tracked Buffs or Slot Assignments if needed."
+            )
+            self.after(0, lambda: Messagebox.show_warning(message, title="Missing Buff References"))
 
     def clear_all_grids(self):
         """Remove all grids with confirmation."""
