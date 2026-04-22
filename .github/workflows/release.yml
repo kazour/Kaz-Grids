@@ -1,7 +1,8 @@
 name: Release
 on:
   push:
-    tags: ['v*']
+    tags: ['v[0-9]*']
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
@@ -9,9 +10,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - run: pip install -r requirements.txt
       - run: python build.py
       - name: Compute SHA256
@@ -20,6 +24,7 @@ jobs:
           $hash = (Get-FileHash "Kaz Grids.zip" -Algorithm SHA256).Hash.ToLower()
           "$hash  Kaz Grids.zip" | Out-File -Encoding ascii -NoNewline "Kaz Grids.zip.sha256"
       - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           name: Kaz Grids ${{ github.ref_name }}
           body_path: .github/release-notes.md
